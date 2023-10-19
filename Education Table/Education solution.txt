@@ -1,0 +1,49 @@
+create table Education (
+employee_id number(3) Primary Key,
+education_level varchar2(255),
+skill_area varchar2(255),
+languages varchar2(255), 
+education_finished date
+);
+ 
+Alter table Education add constraint edulevel_check CHECK (education_level != 'BA');
+Alter table Education add foreign key (employee_id) references employees (employee_id);
+
+Insert into Education values(100,'MSc', 'Finance', 'English', TO_DATE('2003.01.31', 'YYYY.MM.DD'));
+Insert into Education values(108,'BSc', 'Management', 'German', TO_DATE('2007.06.14', 'YYYY.MM.DD'));
+Insert into Education values(132,'MA', 'History', 'English, Latin', TO_DATE('2006.02.14', 'YYYY.MM.DD'));
+Insert into Education values(105,'Highschool', 'IT administrator', 'English, German', TO_DATE('2006.01.30', 'YYYY.MM.DD'));
+ 
+select job_title, education_level 
+from Education inner join Employees on (Education.employee_id = Employees.employee_id) left join Jobs on (Employees.job_id = Jobs.job_id) 
+where education_level LIKE 'B%' or education_level LIKE 'M%' 
+order by salary asc;
+
+select first_name ||' '|| last_name Nev, ROUND(MONTHS_BETWEEN(education_finished,hire_date)) 
+from Education inner join Employees on (Education.employee_id = Employees.employee_id) 
+where hire_date < education_finished;
+
+CREATE or REPLACE VIEW Estimation_employee AS  
+SELECT employee_id, first_name||' '||last_name Name, salary, NVL(commission_pct,0) Comission,
+CASE
+WHEN NVL(commission_pct,0)*salary + salary < 3001 THEN 'HighSchool'
+WHEN NVL(commission_pct,0)*salary + salary BETWEEN 3001 AND 6000 THEN 'MA'
+WHEN NVL(commission_pct,0)*salary + salary BETWEEN 6001 AND 9000 THEN 'BSc'
+ELSE 'MSc'
+END estimated_edu_level
+FROM employees;
+
+SELECT first_name ||' '|| last_name as "employee", prior last_name as "leader", connect_by_root last_name as "CEO",
+CASE 
+WHEN level=1 then 'Owner'
+WHEN level=2 then 'Deputy'
+ELSE 'Employee'
+END jobposition
+FROM employees
+START WITH employee_id = 100 
+CONNECT BY PRIOR employee_id = manager_id;
+
+UPDATE Estimation_employee SET salary = commission*salary + salary;
+ 
+DROP VIEW Estimation_employee;
+DROP TABLE Education;
