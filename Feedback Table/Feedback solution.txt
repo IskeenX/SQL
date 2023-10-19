@@ -1,0 +1,71 @@
+CREATE TABLE Feedback (
+    Feedback_id NUMBER(2) PRIMARY KEY,
+    Employee_id NUMBER(3),
+    Feedback_date DATE,
+    Feedback_empid NUMBER(3),
+    Rating NUMBER(1,0) CHECK (Rating BETWEEN 1 AND 5),
+    CONSTRAINT fk_employee_id FOREIGN KEY (Employee_id) REFERENCES Employees(Employee_id),
+    CONSTRAINT fk_feedback_empid FOREIGN KEY (Feedback_empid) REFERENCES Employees(Employee_id)
+);
+
+
+INSERT INTO Feedback (Feedback_id, Employee_id, Feedback_date, Feedback_empid, Rating)
+VALUES (10, 101, TO_DATE('2005.10.20', 'YYYY.MM.DD'), 108, 3);
+
+INSERT INTO Feedback (Feedback_id, Employee_id, Feedback_date, Feedback_empid, Rating)
+VALUES (20, 109, TO_DATE('2006.03.14', 'YYYY.MM.DD'), 111, 4);
+
+INSERT INTO Feedback (Feedback_id, Employee_id, Feedback_date, Feedback_empid, Rating)
+VALUES (30, 131, TO_DATE('2005.07.27', 'YYYY.MM.DD'), 124, 5);
+
+INSERT INTO Feedback (Feedback_id, Employee_id, Feedback_date, Feedback_empid, Rating)
+VALUES (40, 104, TO_DATE('2006.02.15', 'YYYY.MM.DD'), 104, 4);
+
+
+SELECT d.department_name || ' ' || e.first_name || ' ' || e.last_name AS "Full Name"
+FROM Departments d
+JOIN Employees e ON d.department_id = e.department_id
+WHERE EXISTS (
+    SELECT 1
+    FROM Feedback f
+    WHERE e.employee_id = f.employee_id
+      AND f.Rating IN (4, 5)
+)
+ORDER BY e.last_name;
+
+
+SELECT e.first_name || ' ' || e.last_name AS "Full Name",
+       f.Feedback_date,
+       ROUND(MONTHS_BETWEEN(SYSDATE, f.Feedback_date), 2) AS "Months"
+FROM Employees e JOIN Feedback f ON e.employee_id = f.Employee_id
+WHERE f.Feedback_date < TO_DATE('2006-01-01', 'YYYY-MM-DD');
+
+
+CREATE VIEW review AS
+SELECT f.Employee_id,
+       e.department_id,
+       f.Feedback_date,
+       CASE f.Rating
+           WHEN 5 THEN 'Excellent'
+           WHEN 4 THEN 'Good'
+           WHEN 3 THEN 'Medium'
+           WHEN 2 THEN 'Minimum'
+           WHEN 1 THEN 'Bad'
+       END AS "Text Rating"
+FROM Feedback f JOIN Employees e ON f.Employee_id = e.employee_id;
+
+
+SELECT 
+    e.first_name || ' ' || e.last_name AS "Employee",
+    SYS_CONNECT_BY_PATH(e.first_name || ' ' || e.last_name, '/') AS "Path",
+    LEVEL AS "Path Length",
+    CONNECT_BY_ROOT e.first_name || ' ' || CONNECT_BY_ROOT e.last_name AS "Manager",
+    PRIOR e.first_name || ' ' || e.last_name AS "Supervisor"
+FROM Employees e WHERE CONNECT_BY_ISLEAF = 1 CONNECT BY PRIOR e.employee_id = e.manager_id START WITH e.manager_id IS NULL;
+
+
+DELETE FROM Feedback WHERE Feedback_date < TO_DATE('2006-01-01', 'YYYY-MM-DD');
+
+
+DROP VIEW review;
+DROP TABLE Feedback;
